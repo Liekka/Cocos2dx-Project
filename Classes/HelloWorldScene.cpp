@@ -103,7 +103,7 @@ void HelloWorld::preloadMusic()
 
 void HelloWorld::update(float time) {
 	static int count = 0;
-	obstacle->update(0);
+	obstacle->update(updateTimes);
 	count++;
 
 	auto list = obstacle->obstacleList;
@@ -163,11 +163,18 @@ void HelloWorld::update(float time) {
 		auto disInnerToObst = dis + ball->getContentSize().height * 0.3 * 0.5;
 		auto disOutToObst = dis - ball->getContentSize().height * 0.3 * 0.5;
 		
+		// xq
+		int tag = ball->getTag();
 		if (dis > r / 2 - 20) {
+			
 			if (disOutToObst < r / 2 - 150) {
 				if (ball->getPosition() > obst->getPosition()) {
 					auto color = obstacle->getTopProperty(i);
-					if (ball->getTag() - 2001 == color || (ball->getTag() - 2001 + 2) % 5 == color) {
+					if ((tag == 2001 && color == 2) || 
+						(tag == 2002 && color == 3) || 
+						(tag == 2003 && color == 1) || 
+						(tag == 2004 && color == 4) || 
+						(tag == 2005 && color == 0)) {
 						log("safe");
 					}
 					else {
@@ -177,7 +184,11 @@ void HelloWorld::update(float time) {
 				}
 				else {
 					auto color = obstacle->getBottomProperty(i);
-					if (ball->getTag() - 2001 == color || (ball->getTag() - 2001 + 2) % 5 == color) {
+					if ((tag == 2001 && color == 2) ||
+						(tag == 2002 && color == 3) ||
+						(tag == 2003 && color == 1) ||
+						(tag == 2004 && color == 4) ||
+						(tag == 2005 && color == 0)) {
 						log("safe");
 					}
 					else {
@@ -193,7 +204,11 @@ void HelloWorld::update(float time) {
 			if (disInnerToObst > r / 2 - dangerDis - 30) {
 				if (ball->getPosition() > obst->getPosition()) {
 					auto color = obstacle->getTopProperty(i);
-					if (ball->getTag() - 2001 == color || (ball->getTag() - 2001 + 2) % 5 == color) {
+					if ((tag == 2001 && color == 2) ||
+						(tag == 2002 && color == 3) ||
+						(tag == 2003 && color == 1) ||
+						(tag == 2004 && color == 4) ||
+						(tag == 2005 && color == 0)) {
 						log("safe");
 					}
 					else {
@@ -203,7 +218,11 @@ void HelloWorld::update(float time) {
 				}
 				else {
 					auto color = obstacle->getBottomProperty(i);
-					if (ball->getTag() - 2001 == color || (ball->getTag() - 2001 + 2) % 5 == color) {
+					if ((tag == 2001 && color == 2) ||
+						(tag == 2002 && color == 3) ||
+						(tag == 2003 && color == 1) ||
+						(tag == 2004 && color == 4) ||
+						(tag == 2005 && color == 0)) {
 						log("safe");
 					}
 					else {
@@ -213,6 +232,7 @@ void HelloWorld::update(float time) {
 				}
 			}
 		}
+		// xq
 	}
 
 	// judge whether there is a collision with props
@@ -241,7 +261,7 @@ void HelloWorld::addListener()
 }
 
 void HelloWorld::onKeyPressed(EventKeyboard::KeyCode code, Event* event) {
-	if (code == cocos2d::EventKeyboard::KeyCode::KEY_UP_ARROW) {
+	if (code == cocos2d::EventKeyboard::KeyCode::KEY_SPACE) {
 		velocity = 6;
 		if (GRAVITY < 0.000001f) {
 			GRAVITY = 0.2f;
@@ -305,17 +325,20 @@ void HelloWorld::onBallCrashProps() {
 	ball->setTag(TAG_BALL[r]);
 	// when score reach 3 times then improve the velocity of rotate
 	if (updateTimes < 5) {
-		updateTimes++;
-		obstacle->update(8*updateTimes);
+		// switch between clockwise and anticlockwise randomly
+		Obstacle::clockwise = bool(random(0, 1) % 2);
+		updateTimes += 0.1;
 	}
 }
 
 bool HelloWorld::addBall()
 {
-	ball = Sprite::create(IMG_BALL[0]);
+	// randomly choose a property
+	int r = random(0, 5) % 5;
+	ball = Sprite::create(IMG_BALL[r]);
+	ball->setTag(TAG_BALL[r]);
 	ball->setScale(0.3f);
 	ball->setPosition(Vec2(visibleSize.width / 2, 50));
-	ball->setTag(TAG_BALL[0]);
 	addChild(ball, 1);
 	return true;
 }
@@ -344,8 +367,8 @@ void HelloWorld::onclickSubmit(cocos2d::Ref* p)
 	HttpRequest* request = new HttpRequest();
 
 	request->setRequestType(HttpRequest::Type::POST);
-
-	request->setUrl("http://localhost:8080/submit");
+	string url = Global::remoteServer + "/submit";
+	request->setUrl(url.c_str());
 
 	string s = "score=" + std::to_string(score);
 
@@ -371,6 +394,15 @@ void HelloWorld::onSubmitHttpComplete(HttpClient* sender, HttpResponse* response
 	if (!response->isSucceed()) {
 		log("response failed");
 		log("error buffer: %s", response->getErrorBuffer());
+		log("you should log in before you submit and check the scores");
+		auto label3 = Label::createWithTTF("Clike me! Please Connect the Internet and log in.", "fonts/arial.TTF", 30);
+		auto logOutBtn = MenuItemLabel::create(label3, [&](Ref* sender) {
+			Director::getInstance()->replaceScene(LoginScene::createScene());
+		});
+		Menu* logOut = Menu::create(logOutBtn, NULL);
+		logOut->setPosition(visibleSize.width / 2, visibleSize.height / 8);
+		this->addChild(logOut, 3);
+		return;
 	}
 	rapidjson::Document d;
 	std::vector<char> *buffer = response->getResponseData();
